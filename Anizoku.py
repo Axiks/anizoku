@@ -44,7 +44,10 @@ def select_like_anime(userid, chatid):
             
 def add_like_anime(userid, name, description):
     d = Driver.Driver()
-    lastrowid = d.createAnime(userid, name, description, "")
+    a = Anime.Anime("", name, description, "")
+    a.userId = userid
+    #lastrowid = d.createAnime(userid, name, description, "")
+    lastrowid = d.createAnime(a)
     global addanimeid
     addanimeid = lastrowid
 
@@ -53,7 +56,7 @@ def add_like_anime(userid, name, description):
 
 #Keyboard
 keyboard1 = telebot.types.ReplyKeyboardMarkup(True, True)
-keyboard1.row('/MyAnime', '/AddAnime')
+keyboard1.row('/MyAnime', '/AddAnime', '/AllAnime')
 
 #Function
 @bot.message_handler(commands=['start'])
@@ -84,6 +87,10 @@ def add_title(message):
     #select_like_anime()
 @bot.message_handler(commands=['MyAnime'])
 def my_title(message):
+    t = threading.Thread(target=select_like_anime, name='ThreadDB', args=(message.from_user.id, message.chat.id, ))
+    t.start()
+@bot.message_handler(commands=['AnimeOtherPeople'])
+def otherPeople(message):
     t = threading.Thread(target=select_like_anime, name='ThreadDB', args=(message.from_user.id, message.chat.id, ))
     t.start()
 @bot.message_handler(func=lambda message: True)
@@ -120,14 +127,15 @@ def echo_all(message):
 @bot.message_handler(content_types=['photo'])
 def photoSave(message):
     global addanimeavatar
+    global animePreSave
     if addanimeavatar:
         fileID = message.photo[-1].file_id
         file_info = bot.get_file(fileID)
         downloaded_file = bot.download_file(file_info.file_path)
-
-        global addanimeid
-        with open("image"+ str(addanimeid) +".jpg", 'wb') as new_file:
-            new_file.write(downloaded_file)
-        addanimeavatar = False
+        animePreSave = Anime.Anime.setAvatar(downloaded_file)
+        # global addanimeid
+        # with open("image"+ str(addanimeid) +".jpg", 'wb') as new_file:
+        #     new_file.write(downloaded_file)
+        # addanimeavatar = False
 
 bot.polling()

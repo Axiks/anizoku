@@ -11,7 +11,7 @@ class Driver:
             animes = [] 
             for animeDATA in allAnime:
                 #print("Anime ID: " + str(animeDATA[0]))
-                animes.append(Anime.Anime(animeDATA[0], animeDATA[2], animeDATA[3], animeDATA[4]))
+                animes.append(Anime.Anime(animeDATA[0], animeDATA[1], animeDATA[2], animeDATA[3]))
             return animes
 
     def getUserAnime(self, userid):
