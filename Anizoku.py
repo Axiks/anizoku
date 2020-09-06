@@ -76,7 +76,7 @@ def all_anime(message):
     
 @bot.message_handler(commands=['AddAnime'])
 def add_title(message):
-    bot.send_message(message.chat.id, 'Ти написав мені Добавити Аніме. Введи імя тайтлу)')
+    bot.send_message(message.chat.id, 'НЯ :3 Як називається аніме?')
     global btnaddanime
     btnaddanime = True
     #title = message.text
@@ -101,20 +101,20 @@ def echo_all(message):
             animePreSave.name = message.text
             addanimename = True
             addanimeavatar = True
-            bot.send_message(message.chat.id, "Введи опис до аніме і завантаж аватарку)" + animePreSave.name)
+            bot.send_message(message.chat.id, "Введи опис до аніме: '" + animePreSave.name + "'")
             return 0
         if addanimename == True and addanimedescription == False:
             animePreSave.description = message.text
             addanimedescription = True
-            bot.send_message(message.chat.id, "Опис добалено :3")
+            bot.send_message(message.chat.id, "НЯкую :3 \n Опис добавлено.")
             if addanimeavatar:
-                bot.send_message(message.chat.id, "Можеш ще завантажити аватарку...Будь лапочкою")
+                bot.send_message(message.chat.id, "Можеш ще завантажити аватарку для цього аніме...Будь лапочкою")
         if addanimename == True and addanimedescription == True: 
             add_like_anime(message.from_user.id, animePreSave.name, animePreSave.description)
             #bot.send_message(message.chat.id, 'Шукаю: ' + message.text)
             #bot.send_message(message.chat.id, 'Аніме добавлено в нашу базу даних. Някую)')
             btnaddanime = False
-            addanimeid = False
+            addanimename = False
             addanimedescription = False
     #bot.reply_to(message, message.text)
 @bot.message_handler(content_types=['photo'])
