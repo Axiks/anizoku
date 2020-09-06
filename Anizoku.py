@@ -1,3 +1,8 @@
+from classes import Driver
+from classes import Anime
+#from classes import driver
+#import classes.driver as driver
+
 import threading
 
 import telebot
@@ -5,7 +10,15 @@ bot = telebot.TeleBot('1390196402:AAGrNlTMegTG86EwtwlckHiJnkzfsK6nMJw')
 
 #Var
 global btnaddanime
+global addanimename
+global addanimedescription
+global addanimeavatar
 global addanimeid
+global animePreSave
+animePreSave = Anime.Anime
+addanimename = False
+addanimedescription = False
+addanimeavatar = False
 btnaddanime = False
 addanimeid = 0
 #db
@@ -18,29 +31,25 @@ import sqlite3
     # )""")
 
 def select_like_anime(userid, chatid):
-    with sqlite3.connect('anizoku.db') as con:
-        cur = con.cursor()
-        vuserid = (userid,)
-        cur.execute('SELECT rowid, * FROM likesAnime WHERE userid=?', vuserid)
-        result = cur.fetchall()
-        print(result)
-        for anime in result:
-            mess = "*" + anime[2]+ "*" + "\n\n" + anime[3]
-            bot.send_message(chatid, mess, parse_mode= 'Markdown')
-            try:
-                photo = open("image"+str(anime[0])+".jpg", 'rb')
-                bot.send_photo(chatid, photo)
-            except:
-                print("Oops!  That Image dont open")
-
+    d = Driver.Driver()
+    userAnime = d.getUserAnime(userid)
+    for anime in userAnime:
+        mess = "*" + anime.name+ "*" + "\n\n" + anime.description
+        bot.send_message(chatid, mess, parse_mode= 'Markdown')
+        try:
+            photo = d.getAvatar(str(anime.animeid))
+            bot.send_photo(chatid, photo)
+        except:
+            print("Oops!  That Image dont open")
+            
 def add_like_anime(userid, name, description):
-    with sqlite3.connect('anizoku.db') as con:
-        cur = con.cursor()
-        data = (userid, name, description)
-        cur.execute('INSERT INTO likesAnime (userid, name, description) VALUES (?,?,?)', data)
+    d = Driver.Driver()
+    lastrowid = d.createAnime(userid, name, description, "")
+    global addanimeid
+    addanimeid = lastrowid
 
-        global addanimeid
-        addanimeid = cur.lastrowid
+    global addanimeavatar
+    addanimeavatar = True
 
 #Keyboard
 keyboard1 = telebot.types.ReplyKeyboardMarkup(True, True)
@@ -51,16 +60,20 @@ keyboard1.row('/MyAnime', '/AddAnime')
 def start_message(message):
     bot.send_message(message.chat.id, 'Привіт, ти написав мені /start. Дякую :3' , reply_markup=keyboard1)
     bot.send_message(message.chat.id, 'Даний бот допоможе тобі познайомитись з вподобаннями твоїх друзів в аніме). Також зможеш знайти знайомих з такими самими любими аніме як в тебе)')
-# @bot.message_handler(commands=['Profile'])
-# def profile_view(message):
-#         bot.send_message(message.chat.id, 'Ооо. А це твій профіль. Мій список аніме:')
-#         # message.from_user.id
-# @bot.message_handler(commands=['Image'])
-# def random_photo(message):
-#     print(message)
-#     photo = open('/home/neko/Pobrane/2a8de532-fcc6-4309-b4c5-2a58cef5b8c2.jpg', 'rb')
-#     bot.send_photo(message.chat.id, photo)
-#     bot.send_message(message.chat.id, 'Це фото.')
+
+@bot.message_handler(commands=['AllAnime'])
+def all_anime(message):
+     d = Driver.Driver()
+     allAnime = d.selectAllAnime()
+     for anime in allAnime:
+        mess = "*" + anime.name+ "*" + "\n\n" + anime.description
+        bot.send_message(message.from_user.id, mess, parse_mode= 'Markdown')
+        try:
+            photo = d.getAvatar(str(anime.animeid))
+            bot.send_photo(message.from_user.id, photo)
+        except:
+            print("Oops!  That Image dont open")
+    
 @bot.message_handler(commands=['AddAnime'])
 def add_title(message):
     bot.send_message(message.chat.id, 'Ти написав мені Добавити Аніме. Введи імя тайтлу)')
@@ -75,22 +88,46 @@ def my_title(message):
     t.start()
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
+    global textbuffer
+    textbuffer = message.text
     global btnaddanime
+    global animePreSave
+    global addanimename
+    global addanimedescription
+    global addanimeavatar
     print(btnaddanime)
     if btnaddanime:
-        add_like_anime(message.from_user.id, message.text, "Descr")
-        #bot.send_message(message.chat.id, 'Шукаю: ' + message.text)
-        bot.send_message(message.chat.id, 'Anime add: ' + message.text + '. Pleace write description or upload Avatar')
-        btnaddanime = False
+        if addanimename == False:
+            animePreSave.name = message.text
+            addanimename = True
+            addanimeavatar = True
+            bot.send_message(message.chat.id, "Введи опис до аніме і завантаж аватарку)" + animePreSave.name)
+            return 0
+        if addanimename == True and addanimedescription == False:
+            animePreSave.description = message.text
+            addanimedescription = True
+            bot.send_message(message.chat.id, "Опис добалено :3")
+            if addanimeavatar:
+                bot.send_message(message.chat.id, "Можеш ще завантажити аватарку...Будь лапочкою")
+        if addanimename == True and addanimedescription == True: 
+            add_like_anime(message.from_user.id, animePreSave.name, animePreSave.description)
+            #bot.send_message(message.chat.id, 'Шукаю: ' + message.text)
+            #bot.send_message(message.chat.id, 'Аніме добавлено в нашу базу даних. Някую)')
+            btnaddanime = False
+            addanimeid = False
+            addanimedescription = False
     #bot.reply_to(message, message.text)
 @bot.message_handler(content_types=['photo'])
 def photoSave(message):
-    fileID = message.photo[-1].file_id
-    file_info = bot.get_file(fileID)
-    downloaded_file = bot.download_file(file_info.file_path)
+    global addanimeavatar
+    if addanimeavatar:
+        fileID = message.photo[-1].file_id
+        file_info = bot.get_file(fileID)
+        downloaded_file = bot.download_file(file_info.file_path)
 
-    global addanimeid
-    with open("image"+ str(addanimeid) +".jpg", 'wb') as new_file:
-        new_file.write(downloaded_file)
+        global addanimeid
+        with open("image"+ str(addanimeid) +".jpg", 'wb') as new_file:
+            new_file.write(downloaded_file)
+        addanimeavatar = False
 
 bot.polling()
