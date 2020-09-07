@@ -1,3 +1,4 @@
+import os.path
 from classes import Driver
 from classes import Anime
 #from classes import driver
@@ -15,6 +16,12 @@ global addanimedescription
 global addanimeavatar
 global addanimeid
 global animePreSave
+global userId
+global chatId
+global messageBuffer
+messageBuffer = ""
+chatId = 0
+userId = 0
 animePreSave = Anime.Anime
 addanimename = False
 addanimedescription = False
@@ -36,8 +43,8 @@ def select_like_anime(userid, chatid):
     for anime in userAnime:
         mess = "*" + anime.name+ "*" + "\n\n" + anime.description
         bot.send_message(chatid, mess, parse_mode= 'Markdown')
+        photo = anime.getAvatar()
         try:
-            photo = d.getAvatar(str(anime.animeid))
             bot.send_photo(chatid, photo)
         except:
             print("Oops!  That Image dont open")
@@ -47,12 +54,43 @@ def add_like_anime(userid, name, description):
     a = Anime.Anime("", name, description, "")
     a.userId = userid
     #lastrowid = d.createAnime(userid, name, description, "")
-    lastrowid = d.createAnime(a)
+    lastrowid = d.createAnime(userid, a)
     global addanimeid
     addanimeid = lastrowid
 
+
+def add_anime():
+    global btnaddanime
+    global animePreSave
+    global addanimename
+    global addanimedescription
+    global chatId
+    global userId
+    global messageBuffer
     global addanimeavatar
-    addanimeavatar = True
+    
+    #Добавлення аніме в ОЗУ
+    if btnaddanime:
+        if addanimename == False:
+            #Добавлення назви
+            animePreSave.name = messageBuffer
+            addanimename = True
+            bot.send_message(chatId, "Введи опис до аніме: '" + animePreSave.name + "'")
+            addanimeavatar = True
+            return 0
+        if addanimename == True and addanimedescription == False:
+            #Добавлення опису
+            animePreSave.description = messageBuffer
+            addanimedescription = True
+        
+        if addanimename == True and addanimedescription == True:
+            add_like_anime(userId, animePreSave.name, animePreSave.description)
+            #bot.send_message(message.chat.id, 'Шукаю: ' + message.text)
+            #bot.send_message(message.chat.id, 'Аніме добавлено в нашу базу даних. Някую)')
+            btnaddanime = False
+            addanimename = False
+            addanimedescription = False
+        
 
 #Keyboard
 keyboard1 = telebot.types.ReplyKeyboardMarkup(True, True)
@@ -72,7 +110,7 @@ def all_anime(message):
         mess = "*" + anime.name+ "*" + "\n\n" + anime.description
         bot.send_message(message.from_user.id, mess, parse_mode= 'Markdown')
         try:
-            photo = d.getAvatar(str(anime.animeid))
+            photo = anime.getAvatar()
             bot.send_photo(message.from_user.id, photo)
         except:
             print("Oops!  That Image dont open")
@@ -89,53 +127,34 @@ def add_title(message):
 def my_title(message):
     t = threading.Thread(target=select_like_anime, name='ThreadDB', args=(message.from_user.id, message.chat.id, ))
     t.start()
-@bot.message_handler(commands=['AnimeOtherPeople'])
-def otherPeople(message):
-    t = threading.Thread(target=select_like_anime, name='ThreadDB', args=(message.from_user.id, message.chat.id, ))
-    t.start()
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
-    global textbuffer
-    textbuffer = message.text
-    global btnaddanime
-    global animePreSave
-    global addanimename
-    global addanimedescription
-    global addanimeavatar
+    global chatId
+    global userId
+    global messageBuffer
+    userId = message.from_user.id
+    chatId = message.chat.id
+    messageBuffer = message.text
     print(btnaddanime)
-    if btnaddanime:
-        if addanimename == False:
-            animePreSave.name = message.text
-            addanimename = True
-            addanimeavatar = True
-            bot.send_message(message.chat.id, "Введи опис до аніме: '" + animePreSave.name + "'")
-            return 0
-        if addanimename == True and addanimedescription == False:
-            animePreSave.description = message.text
-            addanimedescription = True
-            bot.send_message(message.chat.id, "НЯкую :3 \n Опис добавлено.")
-            if addanimeavatar:
-                bot.send_message(message.chat.id, "Можеш ще завантажити аватарку для цього аніме...Будь лапочкою")
-        if addanimename == True and addanimedescription == True: 
-            add_like_anime(message.from_user.id, animePreSave.name, animePreSave.description)
-            #bot.send_message(message.chat.id, 'Шукаю: ' + message.text)
-            #bot.send_message(message.chat.id, 'Аніме добавлено в нашу базу даних. Някую)')
-            btnaddanime = False
-            addanimename = False
-            addanimedescription = False
-    #bot.reply_to(message, message.text)
+    add_anime()
 @bot.message_handler(content_types=['photo'])
 def photoSave(message):
     global addanimeavatar
     global animePreSave
+    global btnaddanime
     if addanimeavatar:
         fileID = message.photo[-1].file_id
         file_info = bot.get_file(fileID)
         downloaded_file = bot.download_file(file_info.file_path)
-        animePreSave = Anime.Anime.setAvatar(downloaded_file)
-        # global addanimeid
-        # with open("image"+ str(addanimeid) +".jpg", 'wb') as new_file:
-        #     new_file.write(downloaded_file)
-        # addanimeavatar = False
+        # unpacking the tuple
+        extension = os.path.splitext(file_info.file_path)[1]
+        if False:
+        #if btnaddanime == True:
+            animePreSave.setAvatar(downloaded_file)
+        else:
+            global addanimeid
+            d = Driver.Driver()
+            d.uploadAvatar(addanimeid, downloaded_file, extension)
+            addanimeavatar = False
 
 bot.polling()

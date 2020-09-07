@@ -1,5 +1,6 @@
 class Anime:
-    animeid = ""
+    userid = None
+    animeid = None
     name = ""
     description = ""
     avatarsrc = ""

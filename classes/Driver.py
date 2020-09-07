@@ -1,17 +1,20 @@
 import classes.Anime as Anime
 import sqlite3
 class Driver:
-    def tt(self):
-        print("work")
     def selectAllAnime(self):
         with sqlite3.connect('anizoku.db') as con:
             cur = con.cursor()
-            cur.execute('SELECT rowid, name, description, imagesrc FROM likesAnime')
+            cur.execute('SELECT rowid, name, description, imagesrc, userid FROM likesAnime')
             allAnime = cur.fetchall()
             animes = [] 
             for animeDATA in allAnime:
                 #print("Anime ID: " + str(animeDATA[0]))
-                animes.append(Anime.Anime(animeDATA[0], animeDATA[1], animeDATA[2], animeDATA[3]))
+                anime = Anime.Anime(animeDATA[0], animeDATA[1], animeDATA[2], animeDATA[3])
+                anime.userid = animeDATA[4]
+                #UpLoad Avatar
+                avatar = self.getAvatar(animeDATA[0])                    
+                anime.setAvatar(avatar)
+                animes.append(anime)
             return animes
 
     def getUserAnime(self, userid):
@@ -23,9 +26,28 @@ class Driver:
             animes = [] 
             for animeDATA in userAnime:
                 #print("Anime ID: " + str(animeDATA[0]))
-                animes.append(Anime.Anime(animeDATA[0], animeDATA[2], animeDATA[3], animeDATA[4]))
+                anime = Anime.Anime(animeDATA[0], animeDATA[2], animeDATA[3], animeDATA[4])
+                anime.userid = animeDATA[1]
+                #UpLoad Avatar
+                avatar = self.getAvatar(animeDATA[0])                    
+                anime.setAvatar(avatar)
+                animes.append(anime)
             return animes
-    
+
+    def getAnime(self, animePositionId):
+        with sqlite3.connect('anizoku.db') as con:
+            cur = con.cursor()
+            vanimePositionId = (animePositionId,)
+            cur.execute('SELECT rowid, * FROM likesAnime WHERE rowid=?', vanimePositionId)
+            animeData = cur.fetchone()
+            anime = Anime.Anime(animeDATA[0], animeDATA[2], animeDATA[3], animeDATA[4])
+            anime.userid = animeDATA[1]
+            #UpLoad Avatar
+            avatar = self.getAvatar(animeDATA[0])                    
+            anime.setAvatar(avatar)
+            animes.append(anime)
+            return anime
+
     def getAvatar(self, animePositionId):
         with sqlite3.connect('anizoku.db') as con:
             cur = con.cursor()
@@ -36,28 +58,26 @@ class Driver:
                 photo = open("image"+str(animeAvatar[0])+".jpg", 'rb')
                 return photo
             except:
-                photo = ""
                 # print("Oops!  That Image dont open Driver")
-                return ""
-
-    def createAnime(self, userid, name, description, avatarsrc):
+                return 0
+    
+    def uploadAvatar(self, animePositionId, downloaded_file, extension):
+        #Upload to server store
+        try:
+            with open("image"+ str(animePositionId) + extension, 'wb') as new_file:
+                new_file.write(downloaded_file)
+                return True
+        except:
+            return False
+                
+    def createAnime(self, userid, anime):
         with sqlite3.connect('anizoku.db') as con:
             cur = con.cursor()
-            data = (userid, name, description, avatarsrc)
+            data = (userid, anime.name, anime.description, anime.avatarsrc)
             cur.execute('INSERT INTO likesAnime (userid, name, description, imagesrc) VALUES (?,?,?,?)', data)
             animePositionId = cur.lastrowid
             return animePositionId
 
-
-    def getAnime(self, animePositionId):
-        with sqlite3.connect('anizoku.db') as con:
-            cur = con.cursor()
-            vanimePositionId = (animePositionId,)
-            cur.execute('SELECT rowid, * FROM likesAnime WHERE rowid=?', vanimePositionId)
-            animeData = cur.fetchone()
-
-            anime = Anime.Anime(animeData[0], animeData[1], animeData[2], animeData[3])
-            return anime
     
     def updateAnime(self, animePositionId, name, description, avatarsrc):
         with sqlite3.connect('anizoku.db') as con:
