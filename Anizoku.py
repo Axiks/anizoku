@@ -22,7 +22,7 @@ global messageBuffer
 messageBuffer = ""
 chatId = 0
 userId = 0
-animePreSave = Anime.Anime
+animePreSave = Anime.Anime(0, "", "", "")
 addanimename = False
 addanimedescription = False
 addanimeavatar = False
@@ -50,11 +50,13 @@ def select_like_anime(userid, chatid):
             print("Oops!  That Image dont open")
             
 def add_like_anime(userid, name, description):
+    global animePreSave
     d = Driver.Driver()
-    a = Anime.Anime("", name, description, "")
-    a.userId = userid
+    animePreSave.userId = userid
     #lastrowid = d.createAnime(userid, name, description, "")
-    lastrowid = d.createAnime(userid, a)
+    lastrowid = d.createAnime(userid, animePreSave)
+    animePreSave.animeid = lastrowid
+    print("Last anime id: " + str(lastrowid))
     global addanimeid
     addanimeid = lastrowid
 
@@ -90,17 +92,31 @@ def add_anime():
             btnaddanime = False
             addanimename = False
             addanimedescription = False
+            bot.send_message(chatId, 'Аніме добавлено' , reply_markup=keyboard1)
         
 
 #Keyboard
 keyboard1 = telebot.types.ReplyKeyboardMarkup(True, True)
 keyboard1.row('/MyAnime', '/AddAnime', '/AllAnime')
 
+keyboard2 = telebot.types.ReplyKeyboardMarkup(True, True)
+keyboard2.row('/cancel', )
+
 #Function
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.send_message(message.chat.id, 'Привіт, ти написав мені /start. Дякую :3' , reply_markup=keyboard1)
     bot.send_message(message.chat.id, 'Даний бот допоможе тобі познайомитись з вподобаннями твоїх друзів в аніме). Також зможеш знайти знайомих з такими самими любими аніме як в тебе)')
+
+@bot.message_handler(commands=['cancel'])
+def cancel(message):
+    global btnaddanime
+    global addanimename
+    global addanimedescription
+    btnaddanime = False
+    addanimename = False
+    addanimedescription = False
+    bot.send_message(message.chat.id, 'Дію відмінено' , reply_markup=keyboard1)
 
 @bot.message_handler(commands=['AllAnime'])
 def all_anime(message):
@@ -117,7 +133,7 @@ def all_anime(message):
     
 @bot.message_handler(commands=['AddAnime'])
 def add_title(message):
-    bot.send_message(message.chat.id, 'НЯ :3 Як називається аніме?')
+    bot.send_message(message.chat.id, 'НЯ :3 Як називається аніме?', reply_markup=keyboard2)
     global btnaddanime
     btnaddanime = True
     #title = message.text
@@ -148,13 +164,27 @@ def photoSave(message):
         downloaded_file = bot.download_file(file_info.file_path)
         # unpacking the tuple
         extension = os.path.splitext(file_info.file_path)[1]
-        if False:
-        #if btnaddanime == True:
-            animePreSave.setAvatar(downloaded_file)
+        #print(downloaded_file)
+        #bot.send_photo(message.chat.id, downloaded_file)
+        
+        animePreSave.setAvatar(downloaded_file)
+        animePreSave.avatarextension = extension
+        print("Anime ID: " + str(animePreSave.animeid))
+        if animePreSave.animeid == 0:
+            print("Load avatar to anime obj")
         else:
-            global addanimeid
             d = Driver.Driver()
-            d.uploadAvatar(addanimeid, downloaded_file, extension)
-            addanimeavatar = False
+            animePreSave.setAvatar(downloaded_file)
+            d.updateAnime(animePreSave)
+            print("Update anime")
+
+        # if False:
+        # #if btnaddanime == True:
+        #     animePreSave.setAvatar(downloaded_file)
+        # else:
+        #     global addanimeid
+        #     d = Driver.Driver()
+        #     d.uploadAvatar(addanimeid, downloaded_file, extension)
+        #     addanimeavatar = False
 
 bot.polling()

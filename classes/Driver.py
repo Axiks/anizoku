@@ -47,7 +47,7 @@ class Driver:
             anime.setAvatar(avatar)
             animes.append(anime)
             return anime
-
+    
     def getAvatar(self, animePositionId):
         with sqlite3.connect('anizoku.db') as con:
             cur = con.cursor()
@@ -59,7 +59,7 @@ class Driver:
                 return photo
             except:
                 # print("Oops!  That Image dont open Driver")
-                return 0
+                return False
     
     def uploadAvatar(self, animePositionId, downloaded_file, extension):
         #Upload to server store
@@ -76,28 +76,31 @@ class Driver:
             data = (userid, anime.name, anime.description, anime.avatarsrc)
             cur.execute('INSERT INTO likesAnime (userid, name, description, imagesrc) VALUES (?,?,?,?)', data)
             animePositionId = cur.lastrowid
-            return animePositionId
-
-    
-    def updateAnime(self, animePositionId, name, description, avatarsrc):
+            #Laod avatar to server
+            avatar = anime.getAvatar()
+            if avatar != None:
+                if self.uploadAvatar(animePositionId, avatar, anime.avatarextension):
+                    return animePositionId
+                else:
+                    return 0
+            else:
+                return animePositionId
+                
+    def updateAnime(self, anime):
         with sqlite3.connect('anizoku.db') as con:
+            if anime.animeid == 0:
+                return False
             cur = con.cursor()
-            data = self.getAnime(animePositionId)
-            if name != "":
-                data.name = name
-            if description != "":
-                data.description = description
-            if avatarsrc != "":
-                data.avatarsrc = avatarsrc
-
-            arrAnime = [data.name, data.description, data.avatarsrc, animePositionId]
-
-            cur.execute("UPDATE likesAnime SET name = ?, description = ?, imagesrc = ? WHERE rowid = ?", arrAnime)
-
-    # def __init__(self, animePositionId):
-    #     self.getAnime(animePositionId)
-
-    # def __init__(self, name, description, avatarsrc):
-    #     self.name = name
-    #     self.description = description
-    #     self.avatarsrc = avatarsrc
+            arrAnime = [anime.name, anime.description, anime.avatarsrc, anime.animeid]
+            animePositionId = cur.execute("UPDATE likesAnime SET name = ?, description = ?, imagesrc = ? WHERE rowid = ?", arrAnime)
+            #Laod avatar to server
+            print("Anime update function. Position: " + str(animePositionId) + " . animeid: " + str(anime.animeid))
+            avatar = anime.getAvatar()
+            if avatar != None:
+                if self.uploadAvatar(anime.animeid, avatar, anime.avatarextension):
+                    return animePositionId
+                else:
+                    return 0
+            else:
+                return animePositionId
+            return True                
